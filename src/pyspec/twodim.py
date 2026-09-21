@@ -40,7 +40,12 @@ class Spectrum2D:
     detrend : {'constant', 'linear', False}, default 'linear'
     window : {'hann', None}, default 'hann'
     dims : tuple[str, str], optional
-        Names for the ``(k2, k1)`` output dimensions.
+        Names for the ``(k2, k1)`` output dimensions. Defaults to
+        ``("k2", "k1")`` regardless of the input's own dimension names
+        (e.g. an input ``DataArray`` dimensioned ("y", "x") still
+        produces output dimensioned ("k2", "k1"), not ("y", "x") -- a
+        Fourier transform changes the domain, and the output dimension
+        names reflect that).
 
     Attributes
     ----------
