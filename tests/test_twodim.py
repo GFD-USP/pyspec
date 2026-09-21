@@ -24,7 +24,11 @@ def test_plain_array_output_dims():
     assert isinstance(s.kappa, xr.DataArray)
 
 
-def test_dataarray_input_infers_spacing_and_dim_names():
+def test_dataarray_input_infers_spacing_but_output_dims_are_k2_k1_not_input_names():
+    # The input's own dimension names ("y", "x") describe the space
+    # domain. Fourier transforming it produces a *wavenumber*-domain
+    # output, so the output must not be labeled "y"/"x" even though those
+    # are exactly what's used to infer d1/d2.
     rng = np.random.default_rng(1)
     x = np.arange(0, 64, 2.0)
     y = np.arange(0, 32, 1.0)
@@ -36,7 +40,25 @@ def test_dataarray_input_infers_spacing_and_dim_names():
     s = Spectrum2D(phi)
     assert s.d1 == pytest.approx(2.0)
     assert s.d2 == pytest.approx(1.0)
-    assert s.psd.dims == ("y", "x")
+    assert s.psd.dims == ("k2", "k1")
+
+
+def test_dataarray_input_dims_kwarg_overrides_output_names_only():
+    # The `dims` kwarg names the *output* dimensions; it never changes
+    # which input coordinates d1/d2 are inferred from -- that's always
+    # the DataArray's own dims, in (dim2, dim1) order.
+    rng = np.random.default_rng(1)
+    x = np.arange(0, 64, 2.0)
+    y = np.arange(0, 32, 1.0)
+    phi = xr.DataArray(
+        rng.standard_normal((y.size, x.size)),
+        dims=["y", "x"],
+        coords={"y": y, "x": x},
+    )
+    s = Spectrum2D(phi, dims=("l", "k"))
+    assert s.d1 == pytest.approx(2.0)
+    assert s.d2 == pytest.approx(1.0)
+    assert s.psd.dims == ("l", "k")
 
 
 def test_does_not_mutate_input():

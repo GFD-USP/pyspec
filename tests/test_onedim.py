@@ -26,7 +26,11 @@ def test_plain_array_output_shape_and_dim_name():
     assert s.dt == 1.0
 
 
-def test_dataarray_input_infers_dt_and_dim_name():
+def test_dataarray_input_infers_dt_but_output_dim_is_freq_not_input_name():
+    # A DataArray's own dimension name (e.g. "time") describes the input
+    # domain. Fourier transforming it produces a *frequency*-domain
+    # output, so the output must not be labeled "time" even though "time"
+    # is exactly what's used to infer dt.
     rng = np.random.default_rng(1)
     time = np.arange(0, 200, 2.0)
     phi = xr.DataArray(rng.standard_normal(time.size), dims=["time"], coords={"time": time})
@@ -34,7 +38,22 @@ def test_dataarray_input_infers_dt_and_dim_name():
     s = Spectrum1D(phi)
 
     assert s.dt == pytest.approx(2.0)
-    assert s.psd.dims == ("time",)
+    assert s.psd.dims == ("freq",)
+    assert s.freq.dims == ("freq",)
+
+
+def test_dataarray_input_dim_overrides_output_name_only():
+    # The `dim` kwarg names the *output* dimension; it never changes
+    # which input coordinate dt is inferred from (there's only one for a
+    # 1-D array, so that's unambiguous regardless).
+    rng = np.random.default_rng(1)
+    time = np.arange(0, 200, 2.0)
+    phi = xr.DataArray(rng.standard_normal(time.size), dims=["time"], coords={"time": time})
+
+    s = Spectrum1D(phi, dim="omega")
+
+    assert s.dt == pytest.approx(2.0)
+    assert s.psd.dims == ("omega",)
 
 
 def test_dataarray_input_rejects_uneven_coordinate():

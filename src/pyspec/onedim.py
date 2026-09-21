@@ -16,8 +16,9 @@ class Spectrum1D:
     data : array_like or xarray.DataArray
         The signal to analyze. Must be 1-D. If a ``DataArray``, its
         coordinate is used to infer the sampling interval ``dt`` (which
-        must be evenly spaced) unless ``dt`` is given explicitly, and its
-        dimension name is reused for the output frequency dimension.
+        must be evenly spaced) unless ``dt`` is given explicitly. The
+        output frequency dimension is *not* named after the input's own
+        dimension -- see ``dim`` below.
     dt : float, optional
         Sampling interval. Required if ``data`` is a plain array.
     detrend : {'constant', 'linear', False}, default 'constant'
@@ -26,8 +27,11 @@ class Spectrum1D:
         Taper applied before the FFT.
     dim : str, optional
         Name to use for the frequency dimension/coordinate in the output.
-        Defaults to the input ``DataArray``'s dimension name, or
-        ``"freq"`` for plain-array input.
+        Defaults to ``"freq"`` regardless of the input's own dimension
+        name (e.g. an input ``DataArray`` dimensioned "time" still
+        produces output dimensioned "freq", not "time" -- a Fourier
+        transform changes the domain, and the output dimension name
+        reflects that).
 
     Attributes
     ----------

@@ -26,24 +26,34 @@ def _infer_spacing(coord: np.ndarray, name: str) -> float:
 def as_1d_array_and_dt(
     data, dt: float | None = None, dim: str | None = None
 ) -> tuple[np.ndarray, float, str]:
-    """Return ``(values, dt, dim_name)`` for a 1-D input.
+    """Return ``(values, dt, out_dim_name)`` for a 1-D input.
 
     ``data`` may be a plain 1-D array (``dt`` then required) or a 1-D
     ``xarray.DataArray`` (``dt`` inferred from its coordinate unless given).
+
+    ``dim`` names the *output* dimension (e.g. ``"freq"``) and is never
+    used to pick which input coordinate to read ``dt`` from -- for a 1-D
+    array there is only one dimension to read, so that's unambiguous. The
+    output is never named after the input's own dimension: a Fourier
+    transform changes the domain (time -> frequency, space -> wavenumber),
+    so reusing the input's name (e.g. "time") for a frequency-domain
+    output would be misleading, even though it's the input's name that
+    determines ``dt``.
     """
     if isinstance(data, xr.DataArray):
         if data.ndim != 1:
             raise ValueError(f"expected a 1-D DataArray, got dims {data.dims}")
-        dim_name = dim or data.dims[0]
+        input_dim = data.dims[0]
+        out_dim = dim if dim is not None else "freq"
         arr = np.asarray(data.values, dtype=float)
         if dt is None:
-            if dim_name not in data.coords:
+            if input_dim not in data.coords:
                 raise ValueError(
-                    f"DataArray has no coordinate for dim {dim_name!r}; "
+                    f"DataArray has no coordinate for dim {input_dim!r}; "
                     "pass dt explicitly"
                 )
-            dt = _infer_spacing(data.coords[dim_name].values, dim_name)
-        return arr, dt, dim_name
+            dt = _infer_spacing(data.coords[input_dim].values, input_dim)
+        return arr, dt, out_dim
 
     arr = np.asarray(data, dtype=float)
     if arr.ndim != 1:
@@ -59,36 +69,46 @@ def as_2d_array_and_spacing(
     d2: float | None = None,
     dims: tuple[str, str] | None = None,
 ) -> tuple[np.ndarray, float, float, tuple[str, str]]:
-    """Return ``(values, d1, d2, (dim2_name, dim1_name))`` for a 2-D input.
+    """Return ``(values, d1, d2, (out_dim2_name, out_dim1_name))`` for a 2-D input.
 
     Axis -1 is treated as the "1" axis (spacing ``d1``), axis -2 as the
     "2" axis (spacing ``d2``), matching pyspec's original convention.
+
+    ``dims`` names the *output* dimensions and is never used to pick
+    which of the input's own dimensions to read ``d1``/``d2`` from -- for
+    a 2-D ``DataArray`` that's always ``data.dims`` in ``(dim2, dim1)``
+    order. The output is never named after the input's own dimension
+    names: a Fourier transform changes the domain (space -> wavenumber),
+    so reusing input names (e.g. "y", "x") for a wavenumber-domain output
+    would be misleading, even though it's the input's names that
+    determine ``d1``/``d2``.
     """
     if isinstance(data, xr.DataArray):
         if data.ndim != 2:
             raise ValueError(f"expected a 2-D DataArray, got dims {data.dims}")
-        dim2_name, dim1_name = dims or data.dims
+        input_dim2, input_dim1 = data.dims
+        out_dim2, out_dim1 = dims if dims is not None else ("k2", "k1")
         arr = np.asarray(data.values, dtype=float)
         if d1 is None:
-            if dim1_name not in data.coords:
+            if input_dim1 not in data.coords:
                 raise ValueError(
-                    f"DataArray has no coordinate for dim {dim1_name!r}; "
+                    f"DataArray has no coordinate for dim {input_dim1!r}; "
                     "pass d1 explicitly"
                 )
-            d1 = _infer_spacing(data.coords[dim1_name].values, dim1_name)
+            d1 = _infer_spacing(data.coords[input_dim1].values, input_dim1)
         if d2 is None:
-            if dim2_name not in data.coords:
+            if input_dim2 not in data.coords:
                 raise ValueError(
-                    f"DataArray has no coordinate for dim {dim2_name!r}; "
+                    f"DataArray has no coordinate for dim {input_dim2!r}; "
                     "pass d2 explicitly"
                 )
-            d2 = _infer_spacing(data.coords[dim2_name].values, dim2_name)
-        return arr, d1, d2, (dim2_name, dim1_name)
+            d2 = _infer_spacing(data.coords[input_dim2].values, input_dim2)
+        return arr, d1, d2, (out_dim2, out_dim1)
 
     arr = np.asarray(data, dtype=float)
     if arr.ndim != 2:
         raise ValueError(f"expected a 2-D array, got shape {arr.shape}")
     if d1 is None or d2 is None:
         raise ValueError("d1 and d2 must both be given explicitly for plain numpy input")
-    dim2_name, dim1_name = dims or ("k2", "k1")
-    return arr, d1, d2, (dim2_name, dim1_name)
+    out_dim2, out_dim1 = dims if dims is not None else ("k2", "k1")
+    return arr, d1, d2, (out_dim2, out_dim1)

@@ -3,6 +3,21 @@
 All notable changes to `pyspec` are documented here. Format loosely
 follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Fixed
+
+- **`Spectrum1D`/`Spectrum2D` no longer name their output dimension after
+  the input `DataArray`'s own dimension.** Previously, `Spectrum1D(da)`
+  on a `DataArray` dimensioned `"time"` inferred `dt` from that
+  coordinate *and* labeled the frequency-domain output `"time"` too --
+  which is wrong, since a Fourier transform changes the domain. The
+  output now always defaults to `"freq"` for `Spectrum1D` and
+  `("k2", "k1")` for `Spectrum2D`, regardless of the input's own
+  dimension names; pass `dim=`/`dims=` explicitly to choose a different
+  output name. The input's dimension name is still what determines
+  `dt`/`d1`/`d2` -- that part was never in question.
+
 ## [1.0.0]
 
 A complete, from-scratch rewrite of `pyspec`, modernizing it from its

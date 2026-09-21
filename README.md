@@ -34,18 +34,23 @@ iso = s2.isotropic()   # IsotropicSpectrum, .psd is 1-D DataArray vs radial k
 # Helmholtz (rotational/divergent) decomposition
 k = np.logspace(-3, 0, 60)
 result = spec_helm_decomp(k, Cu=k**-2, Cv=k**-2)
-result.psi   # rotational KE spectrum
-result.phi   # divergent KE spectrum
+result.psi   # rotational velocity-variance spectrum (multiply by 0.5 for KE)
+result.phi   # divergent velocity-variance spectrum (multiply by 0.5 for KE)
 ```
 
 If you pass an `xarray.DataArray` with a coordinate instead of a plain
 array, `dt`/`d1`/`d2` are inferred automatically from the coordinate
-spacing, and the output reuses your dimension names:
+spacing -- but the output dimension is *not* named after your input's
+dimension. A Fourier transform changes the domain (time -> frequency,
+space -> wavenumber), so the output always gets a frequency/wavenumber
+name (`"freq"` for `Spectrum1D`, `("k2", "k1")` for `Spectrum2D`) unless
+you override it explicitly with `dim`/`dims`:
 
 ```python
 import xarray as xr
 da = xr.DataArray(phi, dims=["time"], coords={"time": np.arange(1000) * 0.5})
-s = Spectrum1D(da)     # dt=0.5 inferred, output dim is "time"
+s = Spectrum1D(da)             # dt=0.5 inferred from "time"; output dim is "freq"
+s2 = Spectrum1D(da, dim="omega")  # output dim named "omega" instead
 ```
 
 ## Package layout
